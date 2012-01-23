@@ -1,0 +1,22 @@
+<html>
+  <head>
+    <link rel="stylesheet/less" type="text/css" href="/static/styles.less">
+    <LINK href="/static/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <script src="/static/less.min.js" type="text/javascript"></script>
+  </head>
+  <body>
+    <table>
+      {% for t in tracks %}
+        <tr>
+          <td>{{t['title']}}</td>
+          <td>{{t['artist']}}</td>
+          {% if 'spotify' in t %}
+            <td><a href="{{t['href']}}">{{t['spotify']['title']}}: {{t['spotify']['artist']}}</a></td>
+          {%else%}
+            <td></td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+    </table>
+  </body>
+</html>

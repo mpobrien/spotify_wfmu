@@ -5,7 +5,7 @@ import re
 from BeautifulSoup import BeautifulSoup
 import htmlentitydefs
 import spotimeta
-from pymongo import Connection
+from pymongo import MongoClient
 from jinja2 import Template
 
 out_templ = """
@@ -28,7 +28,7 @@ templ = Template(out_templ)
 extract = lambda keys, dict: reduce(lambda x, y: x.update({y[0]:y[1]}) or x,
                                     map(None, keys, map(dict.get, keys)), {})
 
-db = Connection()['spotify_tracks']
+db = MongoClient()['spotify_tracks']
 
 def unescape(text):
     def fixup(m):
@@ -57,8 +57,9 @@ def main(args):
   else:
     url = args[0]
   tracks = gettracks(url)
-  tracks = spotifytracks(tracks)
-  for index, t in enumerate(tracks):
+  #tracks = spotifytracks(tracks)
+  for index, t in enumerate(spotifytracks(tracks)):
+    print "got", t
     track_id = url
     trackdoc = dict(artist=t['artist'],
                     title=t['track'],)
@@ -66,25 +67,26 @@ def main(args):
       trackdoc.update(dict(spotify=dict(artist=t['spotify']['s_artist'], title=t['spotify']['s_title']),
                       href=t['spotify']['s_href']))
     print trackdoc
-    db.tracks.update({"index":index, "url":url}, {"$set":trackdoc}, upsert=True, safe=True)
+    db.tracks.update({"index":index, "url":url}, {"$set":trackdoc}, upsert=True)
+    time.sleep(5)
 
   #print tracks
   #print templ.render(tracks=tracks)
 
 def spotifytracks(tracklist):
-  outtracks = []
   for track in tracklist:
-    print "searching spotify"
+    print "searching spotify for", track['artist'], track['track']
     search = spotimeta.search_track(track['artist'] + " " + track['track'])
-    time.sleep(5)
     if search["total_results"] > 0:
       topresult = search["result"][0]
       s_artist = ", ".join([a['name'] for a in topresult['artists']])
       s_title = topresult['name']
       s_href = topresult['href']
       track['spotify'] = dict(s_artist=s_artist, s_title=s_title, s_href=s_href)
-    outtracks.append(track)
-  return outtracks
+      yield track
+    else:
+        print "no results, skipping"
+        continue
 
 
 def gettracks(url):
